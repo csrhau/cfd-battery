@@ -1,4 +1,5 @@
 from __future__ import division, print_function
+import sys
 import h5py
 import argparse
 import numpy as np
@@ -38,8 +39,12 @@ def main():
     data[:,-1]=1
 
     if t % args.write_interval == 0:
+      print('Writing ts {}..'.format(t), end="")
+      sys.stdout.flush()
       hdf5_output(data, t, args.output_prefix)
+      print('\t Done! Proceeding...')
   if t % args.write_interval != 0:
+    print('Writing final ts {}...'.format(t))
     hdf5_output(data, t, args.output_prefix)
 
 if __name__ == '__main__':
