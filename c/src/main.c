@@ -82,16 +82,31 @@ int main(int argc, char *argv[]) {
 
 void simulate(double *data, double *next, size_t rows, size_t cols, int outrate, int timesteps){
   double tInit = 0;
-  for (int i = 0; i < rows; i++) {
-    for (int j = 0; j < cols; j++) {
+  for (int i = 1; i < rows-1; i++) {
+    for (int j = 1; j < cols-1; j++) {
        tInit +=  data[i * cols + j];
     }
   }
 
+  // TODO need to pass this in...
+  // To be read from the hdf5 file, so slightly more complex. 
+  // Anyway, off home for tres beers.
+  const double cx = nu * dt / (dx * dx);
+  const double cy = nu * dt / (dy * dy); 
   for (int ts = 1; ts <= timesteps; ++ts) {
     // Do the simulationen
-
-
+    for (int i = 0; i < rows; ++i) {
+      for (int j = 0; j < cols; ++j) {
+        const size_t center = INDEX2D(i, j, rows, cols);
+        const size_t north = INDEX2D(i-1, j, rows, cols);
+        const size_t west = INDEX2D(i, j-1, rows, cols);
+        const size_t south = INDEX2D(i+1, j, rows, cols);
+        const size_t east = INDEX2D(i, j+1, rows, cols);
+        next[center] = data[center] 
+          + cx * (data[west] - 2 * data[center] + data[east]) 
+          + cx * (data[west] - 2 * data[center] + data[east]);
+      }
+    }
 
     // Reflect Boundaries
     // TOP
@@ -118,6 +133,9 @@ void simulate(double *data, double *next, size_t rows, size_t cols, int outrate,
       const size_t right_inner = INDEX2D(i, cols-2, rows, cols);
       next[right_outer] = next[right_inner];
     }
+
+
+    // Calculate temp
 
     // Swap spaces
     double *temp = next;
