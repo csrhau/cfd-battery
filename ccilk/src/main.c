@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include <string.h>
 
 #include "hdf5.h"
+#include "hdf5_hl.h"
 
 #include "main.h"
 
@@ -51,17 +53,40 @@ int main(int argc, char *argv[]) {
           show_usage = 1;
     }
   }
-
   if (show_usage == 1 || optind < argc || infile == NULL || prefix == NULL) {
     print_usage();
     return EXIT_FAILURE;
   }
+  // READ FILE
+  hsize_t dims[2];
+  hid_t file_id;
+  if ((file_id = H5Fopen(infile, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0) {
+    print_usage();
+    return EXIT_FAILURE;
+  }
+  if (H5LTget_dataset_info(file_id, CCILK_DATASET, dims, NULL, NULL) < 0) {
+    print_usage();
+    return EXIT_FAILURE;
+  }
+  int rows = dims[0];
+  int cols = dims[1];
+  double *data = malloc(rows * cols * sizeof(double));
+  H5LTread_dataset_double(file_id, CCILK_DATASET, data);
+  simulate(data, rows, cols, outrate, timesteps);
+  free(data);
+  H5Fclose(file_id);
   return EXIT_SUCCESS;
 }
 
-
-void simulate(void) {
-  printf("Whatevs\n");
+void simulate(double *data, int rows, int cols, int outrate, int timesteps){
+  for (int i = 0; i < rows; i++) {
+    for (int j = 0; j < cols; j++) {
+      printf("%f,", data[i * cols + j]);
+    }
+    printf("\n");
+  }
+  // Read data in
+  printf("simulate called with %d %d %d %d\n", rows, cols, outrate, timesteps);
 }
 
 void print_usage(void) {

@@ -3,7 +3,7 @@
 
 #define CCILK_DATASET "/temperature"
 
-void simulate(char *infile, char *prefix);
+void simulate(double *data, int rows, int cols, int outrate, int timesteps);
 void print_usage(void);
 
 #endif
