@@ -6,9 +6,6 @@
 
 int main(int argc, char *argv[]) {
   hid_t file;
-
-
-
   printf("Hello, World!\n");
   return EXIT_SUCCESS;
 }
