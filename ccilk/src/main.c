@@ -68,8 +68,8 @@ int main(int argc, char *argv[]) {
     print_usage();
     return EXIT_FAILURE;
   }
-  int rows = dims[0];
-  int cols = dims[1];
+  size_t rows = dims[0];
+  size_t cols = dims[1];
   double *data = malloc(rows * cols * sizeof(double));
   H5LTread_dataset_double(file_id, CCILK_DATASET, data);
   simulate(data, rows, cols, outrate, timesteps);
@@ -78,14 +78,16 @@ int main(int argc, char *argv[]) {
   return EXIT_SUCCESS;
 }
 
-void simulate(double *data, int rows, int cols, int outrate, int timesteps){
+void simulate(double *data, size_t rows, size_t cols, int outrate, int timesteps){
+  double tInit = 0;
   for (int i = 0; i < rows; i++) {
     for (int j = 0; j < cols; j++) {
-      printf("%f,", data[i * cols + j]);
+       tInit +=  data[i * cols + j];
     }
-    printf("\n");
   }
-  // Read data in
+
+
+    // Read data in
   printf("simulate called with %d %d %d %d\n", rows, cols, outrate, timesteps);
 }
 
