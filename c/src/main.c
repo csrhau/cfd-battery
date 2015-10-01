@@ -8,9 +8,10 @@
 
 #include "main.h"
 
-static char *progname;
+#define INDEX2D(row, col, rows, cols) ((row) * (cols) + (col))
 
 #define GETOPTS "i:p:r:t:"
+static char *progname;
 static struct option long_opts[] = {
   {"infile", required_argument, NULL, 'i'},
   {"prefix", required_argument, NULL, 'p'},
@@ -71,14 +72,15 @@ int main(int argc, char *argv[]) {
   size_t rows = dims[0];
   size_t cols = dims[1];
   double *data = malloc(rows * cols * sizeof(double));
+  double *next = malloc(rows * cols * sizeof(double));
   H5LTread_dataset_double(file_id, CCILK_DATASET, data);
-  simulate(data, rows, cols, outrate, timesteps);
+  simulate(data, next, rows, cols, outrate, timesteps);
   free(data);
   H5Fclose(file_id);
   return EXIT_SUCCESS;
 }
 
-void simulate(double *data, size_t rows, size_t cols, int outrate, int timesteps){
+void simulate(double *data, double *next, size_t rows, size_t cols, int outrate, int timesteps){
   double tInit = 0;
   for (int i = 0; i < rows; i++) {
     for (int j = 0; j < cols; j++) {
@@ -86,9 +88,42 @@ void simulate(double *data, size_t rows, size_t cols, int outrate, int timesteps
     }
   }
 
+  for (int ts = 1; ts <= timesteps; ++ts) {
+    // Do the simulationen
 
-    // Read data in
-  printf("simulate called with %d %d %d %d\n", rows, cols, outrate, timesteps);
+
+
+    // Reflect Boundaries
+    // TOP
+    for (int j = 1; j < cols; ++j) {
+      const size_t top_outer = INDEX2D(0, j, rows, cols);
+      const size_t top_inner = INDEX2D(1, j, rows, cols);
+      next[top_outer] = next[top_inner];
+    }
+    // LEFT
+    for (int i = 1; i < rows; ++i) {
+      const size_t left_outer = INDEX2D(i, 0, rows, cols);
+      const size_t left_inner = INDEX2D(i, 1, rows, cols);
+      next[left_outer] = next[left_inner];
+    }
+    // BOTTOM
+    for (int j = 1; j < cols; ++j) {
+      const size_t bottom_outer = INDEX2D(rows-1, j, rows, cols);
+      const size_t bottom_inner = INDEX2D(rows-2, j, rows, cols);
+      next[bottom_outer] = next[bottom_inner];
+    }
+    // RIGHT
+    for (int i = 1; i < rows; ++i) {
+      const size_t right_outer = INDEX2D(i, cols-1, rows, cols);
+      const size_t right_inner = INDEX2D(i, cols-2, rows, cols);
+      next[right_outer] = next[right_inner];
+    }
+
+    // Swap spaces
+    double *temp = next;
+    next = data;
+    data = temp;
+  }
 }
 
 void print_usage(void) {
