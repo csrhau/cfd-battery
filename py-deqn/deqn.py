@@ -20,12 +20,14 @@ def main():
   args = process_arguments()
   with h5py.File(args.infile, 'r') as infile:
     data = infile['temperature'][...]
-    nu = infile.attrs['nu']
-    sigma = infile.attrs['sigma']
+    nu = infile['properties'].attrs['nu']
+    sigma = infile['properties'].attrs['sigma']
+    width = infile['domain'].attrs['width']
+    depth = infile['domain'].attrs['depth']
   ny, nx = data.shape
   nt = args.timesteps
-  dx = 2.0/(nx-1)
-  dy = 2.0/(ny-1)
+  dx = width/(nx-1)
+  dy = depth/(ny-1)
   dt = sigma*dx*dy/nu
 
   hdf5_output(data, 0, args.output_prefix)
