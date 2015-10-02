@@ -110,7 +110,7 @@ void simulate(double *data,
   }
 
   // Initial Write
-  hdf5_output(data, 0, prefix);
+  hdf5_output(data, 0, rows, cols, prefix);
 
   const double dx = width / (cols - 1);
   const double dy = depth / (rows - 1);
@@ -119,8 +119,8 @@ void simulate(double *data,
   const double cy = nu * dt / (dy * dy); 
   for (int ts = 1; ts <= timesteps; ++ts) {
     // Do the simulationen
-    for (int i = 0; i < rows; ++i) {
-      for (int j = 0; j < cols; ++j) {
+    for (int i = 1; i < rows-1; ++i) {
+      for (int j = 1; j < cols-1; ++j) {
         const size_t center = INDEX2D(i, j, rows, cols);
         const size_t north = INDEX2D(i-1, j, rows, cols);
         const size_t west = INDEX2D(i, j-1, rows, cols);
@@ -128,34 +128,34 @@ void simulate(double *data,
         const size_t east = INDEX2D(i, j+1, rows, cols);
         next[center] = data[center] 
           + cx * (data[west] - 2 * data[center] + data[east]) 
-          + cx * (data[west] - 2 * data[center] + data[east]);
+          + cy * (data[north] - 2 * data[center] + data[south]);
       }
     }
 
     // Reflect Boundaries
     // TOP
-    for (int j = 1; j < cols; ++j) {
+    for (int j = 0; j < cols; ++j) {
       const size_t top_outer = INDEX2D(0, j, rows, cols);
       const size_t top_inner = INDEX2D(1, j, rows, cols);
-      next[top_outer] = next[top_inner];
+      next[top_outer] = 1; //next[top_inner];
     }
     // LEFT
-    for (int i = 1; i < rows; ++i) {
+    for (int i = 1; i < rows-1; ++i) {
       const size_t left_outer = INDEX2D(i, 0, rows, cols);
       const size_t left_inner = INDEX2D(i, 1, rows, cols);
-      next[left_outer] = next[left_inner];
+      next[left_outer] = 1; // next[left_inner];
     }
     // BOTTOM
-    for (int j = 1; j < cols; ++j) {
+    for (int j = 0; j < cols; ++j) {
       const size_t bottom_outer = INDEX2D(rows-1, j, rows, cols);
       const size_t bottom_inner = INDEX2D(rows-2, j, rows, cols);
-      next[bottom_outer] = next[bottom_inner];
+      next[bottom_outer] = 1; // next[bottom_inner];
     }
     // RIGHT
-    for (int i = 1; i < rows; ++i) {
+    for (int i = 1; i < rows-1; ++i) {
       const size_t right_outer = INDEX2D(i, cols-1, rows, cols);
       const size_t right_inner = INDEX2D(i, cols-2, rows, cols);
-      next[right_outer] = next[right_inner];
+      next[right_outer] = 1; // next[right_inner];
     }
 
     // Calculate temp
@@ -166,17 +166,23 @@ void simulate(double *data,
     data = temp;
 
     if (ts % outrate == 0) {
-      hdf5_output(data, ts, prefix);
+      hdf5_output(data, ts, rows, cols, prefix);
     }
   }
   if (timesteps % outrate != 0) {
       // Final output
-      hdf5_output(data, timesteps, prefix);
+      hdf5_output(data, timesteps, rows, cols, prefix);
   }
 }
 
-void hdf5_output(double *data, int ts, char *prefix) {
-  printf("Outputting data for timestep %s to %s-%d.h5\n", prefix, prefix, ts);
+void hdf5_output(double *data, int ts, int rows, int cols, char *prefix) {
+  char buffer [MAX_FILENAME_LENGTH];
+  snprintf(buffer, MAX_FILENAME_LENGTH, "%s-%d.h5", prefix, ts);
+  printf("Outputting data for timestep %d to %s\n", ts, buffer);
+  hid_t file_id = H5Fcreate(buffer, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+  hsize_t dims[2] = {rows, cols};
+  H5LTmake_dataset_double(file_id, CCILK_DATASET, 2, dims, data);
+  H5Fclose (file_id);
 }
 
 void print_usage(void) {
