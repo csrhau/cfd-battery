@@ -73,14 +73,35 @@ int main(int argc, char *argv[]) {
   size_t cols = dims[1];
   double *data = malloc(rows * cols * sizeof(double));
   double *next = malloc(rows * cols * sizeof(double));
-  H5LTread_dataset_double(file_id, CCILK_DATASET, data);
-  simulate(data, next, rows, cols, outrate, timesteps);
+  double width, depth, nu, sigma; 
+  if (H5LTread_dataset_double(file_id, CCILK_DATASET, data) < 0
+   || H5LTget_attribute_double(file_id, "/domain/", "width", &width) < 0 
+   || H5LTget_attribute_double(file_id, "/domain/", "depth", &depth) < 0 
+   || H5LTget_attribute_double(file_id, "/properties/", "nu", &nu) < 0 
+   || H5LTget_attribute_double(file_id, "/properties/", "sigma", &sigma) < 0) {
+    fprintf(stderr, "Encountered an issue reading the dataset\n");
+    return EXIT_FAILURE;
+  };
+
+  printf("Width: %f dept %f\n", width, depth);
+
+  simulate(data, next, rows, cols, width, depth, nu, sigma, outrate, timesteps, prefix);
   free(data);
   H5Fclose(file_id);
   return EXIT_SUCCESS;
 }
 
-void simulate(double *data, double *next, size_t rows, size_t cols, int outrate, int timesteps){
+void simulate(double *data,
+              double *next, 
+              size_t rows, 
+              size_t cols, 
+              double width, 
+              double depth,
+              double nu,
+              double sigma,
+              int outrate, 
+              int timesteps,
+              char *prefix){
   double tInit = 0;
   for (int i = 1; i < rows-1; i++) {
     for (int j = 1; j < cols-1; j++) {
@@ -88,9 +109,12 @@ void simulate(double *data, double *next, size_t rows, size_t cols, int outrate,
     }
   }
 
-  // TODO need to pass this in...
-  // To be read from the hdf5 file, so slightly more complex. 
-  // Anyway, off home for tres beers.
+  // Initial Write
+  hdf5_output(data, 0, prefix);
+
+  const double dx = width / (cols - 1);
+  const double dy = depth / (rows - 1);
+  const double dt = sigma * dx * dy / nu;
   const double cx = nu * dt / (dx * dx);
   const double cy = nu * dt / (dy * dy); 
   for (int ts = 1; ts <= timesteps; ++ts) {
@@ -134,14 +158,25 @@ void simulate(double *data, double *next, size_t rows, size_t cols, int outrate,
       next[right_outer] = next[right_inner];
     }
 
-
     // Calculate temp
 
     // Swap spaces
     double *temp = next;
     next = data;
     data = temp;
+
+    if (ts % outrate == 0) {
+      hdf5_output(data, ts, prefix);
+    }
   }
+  if (timesteps % outrate != 0) {
+      // Final output
+      hdf5_output(data, timesteps, prefix);
+  }
+}
+
+void hdf5_output(double *data, int ts, char *prefix) {
+  printf("Outputting data for timestep %s to %s-%d.h5\n", prefix, prefix, ts);
 }
 
 void print_usage(void) {

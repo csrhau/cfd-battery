@@ -4,8 +4,10 @@ import numpy as np
 
 def process_arguments():
   parser = argparse.ArgumentParser(description="Heat Equation IC generator")
-  parser.add_argument('-x', '--cols', type=int, default=31, help='Simulation domain width')
-  parser.add_argument('-y', '--rows', type=int, default=31, help='Simulation domain height')
+  parser.add_argument('-x', '--cols', type=int, default=31, help='Simulation columns')
+  parser.add_argument('-y', '--rows', type=int, default=31, help='Simulation rows')
+  parser.add_argument('-w', '--width', type=float, default=2, help='Simulation domain width')
+  parser.add_argument('-d', '--depth', type=float, default=2, help='Simulation domain depth (height)')
   parser.add_argument('-s', '--sigma', type=float, default=.25, help='Sigma')
   parser.add_argument('-n', '--nu', type=float, default=.05, help='Nu')
   parser.add_argument('-g', '--generator', type=str, choices=['barbra', 'ones', 'hotcorner'], default='barbra')
@@ -40,10 +42,14 @@ def main():
     data = hotcorner_gen(args.rows, args.cols)
 
   with h5py.File(args.outfile, 'w-') as of:
+    dom = of.create_group('domain')
+    dom.attrs['width'] = args.width
+    dom.attrs['depth'] = args.depth
+    prp = of.create_group('properties')
+    prp.attrs['sigma'] = args.sigma
+    prp.attrs['nu'] = args.nu
     ds = of.create_dataset('temperature', data=data) 
-    of.attrs['generator'] = np.string_(args.generator)
-    of.attrs['sigma'] = args.sigma
-    of.attrs['nu'] = args.nu
+    ds.attrs['generator'] = np.string_(args.generator)
 
 if __name__ == '__main__':
   main()
